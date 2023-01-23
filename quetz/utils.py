@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import unquote
 
+import zstandard
 from sqlalchemy import String, and_, cast, collate, not_, or_
 
 from .db_models import Channel, Package, PackageVersion, User
@@ -84,16 +85,24 @@ def add_temp_static_file(
     bz2_file = bz2.compress(raw_file)
     gzp_file = gzip.compress(raw_file)
 
+    # zstd compression
+    zstd = zstandard.ZstdCompressor()
+    zstd_file = zstd.compress(raw_file)
+
     with open(f"{file_path}.bz2", 'wb') as fo:
         fo.write(bz2_file)
 
     with open(f"{file_path}.gz", 'wb') as fo:
         fo.write(gzp_file)
 
+    with open(f"{file_path}.zst", 'wb') as fo:
+        fo.write(zstd_file)
+
     if file_index:
         add_entry_for_index(file_index, subdir, fname, raw_file)
         add_entry_for_index(file_index, subdir, f"{fname}.bz2", bz2_file)
         add_entry_for_index(file_index, subdir, f"{fname}.gz", gzp_file)
+        add_entry_for_index(file_index, subdir, f"{fname}.zst", zstd_file)
 
 
 def add_entry_for_index(files, subdir, fname, data_bytes):
